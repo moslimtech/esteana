@@ -53,7 +53,7 @@
 
 ## ٨. تواصل معنا
 
-لأي استفسار حول الخصوصية أو البيانات: [github.com/moslimtech/esteana](https://github.com/moslimtech/esteana).
+لأي استفسار حول الخصوصية أو البيانات، يمكنك التواصل معنا عبر البريد الإلكتروني (للتواصل فقط): [ie4951611@gmail.com](mailto:ie4951611@gmail.com)، أو عبر مستودع التطبيق على GitHub.
 
 ---
 

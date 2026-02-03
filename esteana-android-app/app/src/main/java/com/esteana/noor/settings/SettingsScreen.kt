@@ -1,8 +1,10 @@
 package com.esteana.noor.settings
 
 import android.app.DatePickerDialog
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -176,9 +178,13 @@ fun SettingsScreen(
         TextButton(
             onClick = {
                 val url = context.getString(R.string.privacy_policy_url)
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                if (intent.resolveActivity(context.packageManager) != null) {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
                     context.startActivity(Intent.createChooser(intent, "فتح سياسة الخصوصية"))
+                } catch (e: ActivityNotFoundException) {
+                    Toast.makeText(context, "لا يوجد تطبيق لفتح الرابط", Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth()

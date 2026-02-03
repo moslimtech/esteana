@@ -21,7 +21,7 @@
    - من المستودع: **Settings → Pages → Source** اختر **Deploy from a branch**.
    - Branch: **main**، Folder: **/docs** ثم Save.
    - بعد دقائق، الرابط سيكون:  
-     **https://moslimtech.github.io/esteana/esteana-android-app/docs/privacy-policy.html**  
+     **https://hima1710.github.io/esteana/esteana-android-app/docs/privacy-policy.html**  
      استخدم هذا الرابط في حقل «سياسة الخصوصية» في Play Console.
 
 2. **استضافة أخرى:** انسخ ملف `docs/privacy-policy.html` إلى أي خادم ويب أو خدمة استضافة وضَع الرابط الذي يعطيك إياه الموقع.
