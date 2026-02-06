@@ -20,7 +20,9 @@ function AppRoutes() {
   );
 }
 
-const isFileProtocol = typeof window !== 'undefined' && window.location?.protocol === 'file:';
+const isFileProtocol = typeof window !== 'undefined' && (
+  window.location?.protocol === 'file:' || window.location?.hostname === 'app.esteana.local'
+);
 
 export default function App() {
   const Router = isFileProtocol ? HashRouter : BrowserRouter;

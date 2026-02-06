@@ -104,25 +104,32 @@ function flatToSurahs(flat) {
   return Array.from(bySura.values()).sort((a, b) => a.number - b.number);
 }
 
-/** في WebView (file://) نطلب الـ assets من هذا الأصل؛ الأندرويد يعترض الطلب ويرد من الـ assets. */
+/** في WebView نطلب الـ assets من هذا الأصل؛ الأندرويد يعترض الطلب ويرد من الـ assets. */
 const ANDROID_ASSET_BASE = 'https://app.esteana.local';
+/** مصدر احتياطي للمصحف عند فشل الاعتراض في أندرويد (ملف من النشر على Vercel). */
+const QURAN_FALLBACK_URL = 'https://esteana.vercel.app/quran.json';
+/** true عند التشغيل داخل أندرويد (file:// أو تحميل من app.esteana.local عبر loadDataWithBaseURL). */
+const isAndroidAssetHost = typeof window !== 'undefined' && (
+  window.location?.protocol === 'file:' || window.location?.hostname === 'app.esteana.local'
+);
 
 /**
- * تحميل المصحف من الملف المحلي. في WebView (file://) نستخدم https://app.esteana.local/quran.json
- * والأندرويد يعترض الطلب ويرد المحتوى من الـ assets.
+ * تحميل المصحف من ملف JSON. داخل أندرويد: أولاً app.esteana.local، عند الفشل من Vercel.
  */
 async function loadQuranFromLocalJson() {
-  const isFile = typeof window !== 'undefined' && window.location?.protocol === 'file:';
-  const url = isFile
-    ? `${ANDROID_ASSET_BASE}/quran.json`
-    : (window.location?.href?.replace(/\/[^/]*$/, '/') || '') + 'quran.json';
+  const urls = isAndroidAssetHost
+    ? [`${ANDROID_ASSET_BASE}/quran.json`, QURAN_FALLBACK_URL]
+    : [(window.location?.href?.replace(/\/[^/]*$/, '/') || '') + 'quran.json'];
   let flat = null;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    flat = await res.json();
-  } catch (e) {
-    return { ok: false, error: e?.message || 'Fetch failed' };
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      flat = await res.json();
+      if (Array.isArray(flat) && flat.length > 0) break;
+    } catch (_) {
+      continue;
+    }
   }
   if (!Array.isArray(flat) || flat.length === 0) return { ok: false, error: 'Empty local Quran' };
   const surahs = flatToSurahs(flat);
@@ -144,10 +151,8 @@ async function loadQuranFromLocalJson() {
 }
 
 export async function downloadQuranData() {
-  const isFile = typeof window !== 'undefined' && window.location?.protocol === 'file:';
-
-  // من ملف (WebView من assets): نفضّل المحلي أولاً لتجنب CORS
-  if (isFile) {
+  // داخل أندرويد (file:// أو app.esteana.local): نفضّل المحلي أولاً
+  if (isAndroidAssetHost) {
     const local = await loadQuranFromLocalJson();
     if (local.ok) return local;
   }
@@ -157,7 +162,7 @@ export async function downloadQuranData() {
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     const json = await res.json();
     if (json.code !== 200 || !json.data?.surahs?.length) {
-      if (isFile) return loadQuranFromLocalJson();
+      if (isAndroidAssetHost) return loadQuranFromLocalJson();
       return { ok: false, error: 'Invalid API response' };
     }
 
@@ -176,7 +181,7 @@ export async function downloadQuranData() {
     await tx.done;
     return { ok: true };
   } catch (err) {
-    if (isFile) return loadQuranFromLocalJson();
+    if (isAndroidAssetHost) return loadQuranFromLocalJson();
     return { ok: false, error: err?.message || 'Network error' };
   }
 }

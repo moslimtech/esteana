@@ -4,15 +4,15 @@ import { TASKS_BY_AGE_GROUP } from '../constants/athariTasks';
 
 const ANDROID_ASSET_BASE = 'https://app.esteana.local';
 const DAILY_ACTIONS_JSON = '/daily_actions.json';
+const isAndroidAssetHost = typeof window !== 'undefined' && (
+  window.location?.protocol === 'file:' || window.location?.hostname === 'app.esteana.local'
+);
 
 /**
- * جلب daily_actions.json — في WebView (file://) من app.esteana.local، وإلا fetch من المسار العادي.
+ * جلب daily_actions.json — داخل أندرويد من app.esteana.local، وإلا fetch من المسار العادي.
  */
 async function loadDailyActionsJson() {
-  const url =
-    typeof window !== 'undefined' && window.location?.protocol === 'file:'
-      ? `${ANDROID_ASSET_BASE}/daily_actions.json`
-      : DAILY_ACTIONS_JSON;
+  const url = isAndroidAssetHost ? `${ANDROID_ASSET_BASE}/daily_actions.json` : DAILY_ACTIONS_JSON;
   try {
     const r = await fetch(url);
     return r.ok ? await r.json() : null;

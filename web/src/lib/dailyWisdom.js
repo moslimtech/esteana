@@ -1,17 +1,17 @@
 const ANDROID_ASSET_BASE = 'https://app.esteana.local';
 const WISDOM_URL = '/daily-wisdom.json';
+const isAndroidAssetHost = typeof window !== 'undefined' && (
+  window.location?.protocol === 'file:' || window.location?.hostname === 'app.esteana.local'
+);
 let cachedList = null;
 
 /**
- * جلب قائمة الحكم من الملف المحلي (مرّة واحدة). في WebView (file://) نطلب من app.esteana.local.
+ * جلب قائمة الحكم من الملف المحلي (مرّة واحدة). داخل أندرويد نطلب من app.esteana.local.
  * @returns {Promise<Array<{ type: string, text: string, source: string }>>}
  */
 export async function fetchDailyWisdomList() {
   if (cachedList) return cachedList;
-  const url =
-    typeof window !== 'undefined' && window.location?.protocol === 'file:'
-      ? `${ANDROID_ASSET_BASE}/daily-wisdom.json`
-      : WISDOM_URL;
+  const url = isAndroidAssetHost ? `${ANDROID_ASSET_BASE}/daily-wisdom.json` : WISDOM_URL;
   const res = await fetch(url);
   if (!res.ok) return [];
   const list = await res.json();
