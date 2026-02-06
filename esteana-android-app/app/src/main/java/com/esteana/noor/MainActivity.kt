@@ -101,18 +101,17 @@ class MainActivity : ComponentActivity() {
                                         else -> "application/octet-stream"
                                     }
                                     return try {
-                                        val afd = context.assets.openFd(assetPath)
-                                        val stream = afd.createInputStream()
-                                        val length = afd.length.toInt()
+                                        val stream = context.assets.open(assetPath)
                                         val headers = java.util.HashMap<String, String>().apply {
                                             put("Access-Control-Allow-Origin", "*")
                                             put("Cache-Control", "no-cache")
-                                            put("Content-Length", length.toString())
                                         }
-                                        if (BuildConfig.DEBUG) Log.d(TAG, "Intercept OK: $assetPath ($length bytes)")
+                                        if (BuildConfig.DEBUG) Log.d(TAG, "Intercept OK: $assetPath")
+                                        if (assetPath.endsWith("quran.json")) Log.d("Esteana_Quran", "Intercept: serving quran.json")
                                         WebResourceResponse(mimeType, "UTF-8", 200, "OK", headers, stream)
                                     } catch (e: Exception) {
                                         if (BuildConfig.DEBUG) Log.e(TAG, "Intercept fail: $assetPath", e)
+                                        if (assetPath.endsWith("quran.json")) Log.e("Esteana_Quran", "Intercept fail: quran.json", e)
                                         null
                                     }
                                 }

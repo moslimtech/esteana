@@ -113,6 +113,16 @@ const isAndroidAssetHost = typeof window !== 'undefined' && (
   window.location?.protocol === 'file:' || window.location?.hostname === 'app.esteana.local'
 );
 
+/** إرسال رسالة إلى Logcat عند التشغيل داخل أندرويد (للتتبع). */
+function logQuran(msg) {
+  try {
+    if (typeof window !== 'undefined') {
+      const b = window.Android || window.AndroidBridge;
+      if (b && typeof b.log === 'function') b.log('[Quran] ' + msg);
+    }
+  } catch (_) {}
+}
+
 /**
  * تحميل المصحف من ملف JSON. داخل أندرويد: أولاً app.esteana.local، عند الفشل من Vercel.
  */
@@ -122,18 +132,33 @@ async function loadQuranFromLocalJson() {
     : [(window.location?.href?.replace(/\/[^/]*$/, '/') || '') + 'quran.json'];
   let flat = null;
   for (const url of urls) {
+    logQuran('fetch: ' + url);
     try {
       const res = await fetch(url);
-      if (!res.ok) continue;
+      if (!res.ok) {
+        logQuran('fetch fail: ' + url + ' status=' + res.status);
+        continue;
+      }
       flat = await res.json();
-      if (Array.isArray(flat) && flat.length > 0) break;
-    } catch (_) {
+      if (Array.isArray(flat) && flat.length > 0) {
+        logQuran('fetch ok: ' + url + ' verses=' + flat.length);
+        break;
+      }
+    } catch (e) {
+      logQuran('fetch error: ' + url + ' ' + (e?.message || ''));
       continue;
     }
   }
-  if (!Array.isArray(flat) || flat.length === 0) return { ok: false, error: 'Empty local Quran' };
+  if (!Array.isArray(flat) || flat.length === 0) {
+    logQuran('loadQuranFromLocalJson: no data');
+    return { ok: false, error: 'Empty local Quran' };
+  }
   const surahs = flatToSurahs(flat);
-  if (surahs.length === 0) return { ok: false, error: 'Empty local Quran' };
+  if (surahs.length === 0) {
+    logQuran('loadQuranFromLocalJson: flatToSurahs empty');
+    return { ok: false, error: 'Empty local Quran' };
+  }
+  logQuran('loadQuranFromLocalJson: saving surahs=' + surahs.length);
   const db = await openMuslimJourneyDB();
   const tx = db.transaction('quran', 'readwrite');
   for (const s of surahs) {
@@ -147,17 +172,20 @@ async function loadQuranFromLocalJson() {
     });
   }
   await tx.done;
+  logQuran('loadQuranFromLocalJson: done');
   return { ok: true };
 }
 
 export async function downloadQuranData() {
   // داخل أندرويد: نجرب API أولاً (يعمل مع النت)، ثم المحلي (اعتراض أو Vercel)
   if (isAndroidAssetHost) {
+    logQuran('downloadQuranData: trying API first');
     try {
       const res = await fetch(QURAN_UTHMANI_API);
       if (res.ok) {
         const json = await res.json();
         if (json.code === 200 && json.data?.surahs?.length) {
+          logQuran('API ok: surahs=' + json.data.surahs.length);
           const db = await openMuslimJourneyDB();
           const tx = db.transaction('quran', 'readwrite');
           for (const s of json.data.surahs) {
@@ -171,12 +199,20 @@ export async function downloadQuranData() {
             });
           }
           await tx.done;
+          logQuran('downloadQuranData: saved to DB from API');
           return { ok: true };
         }
-      }
-    } catch (_) {}
+      } else logQuran('API fail: status=' + res.status);
+    } catch (e) {
+      logQuran('API error: ' + (e?.message || ''));
+    }
+    logQuran('downloadQuranData: trying local (intercept + Vercel)');
     const local = await loadQuranFromLocalJson();
-    if (local.ok) return local;
+    if (local.ok) {
+      logQuran('downloadQuranData: saved to DB from local');
+      return local;
+    }
+    logQuran('downloadQuranData: all failed');
     return { ok: false, error: 'Quran load failed' };
   }
 

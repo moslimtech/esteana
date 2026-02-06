@@ -5,21 +5,31 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Base64
+import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import com.google.firebase.messaging.FirebaseMessaging
 import java.util.concurrent.Executors
 
+/** Tag لتتبع المصحف في Logcat — ابحث عن Esteana_Quran */
+private const val QURAN_LOG_TAG = "Esteana_Quran"
+
 /**
  * جسر JavaScript ← → Android للويب الهجين (WebAppInterface).
  * يُربط بالـ WebView عبر addJavascriptInterface فيستدعيه الـ JS:
- * Android.vibrate() أو AndroidBridge.vibrate()، Android.getFCMToken()، Android.loadQuranJson()
+ * Android.vibrate() أو AndroidBridge.vibrate()، Android.getFCMToken()، Android.log()
  */
 class WebAppInterface(
     private val webView: WebView
 ) {
 
     private val ioExecutor = Executors.newSingleThreadExecutor()
+
+    /** تسجيل رسالة من الويب في Logcat — للتصحيح (مثلاً تتبع تحميل المصحف). */
+    @JavascriptInterface
+    fun log(message: String) {
+        Log.d(QURAN_LOG_TAG, message)
+    }
 
     /**
      * استدعاء نظام الاهتزاز في الأندرويد (Haptic Feedback).
