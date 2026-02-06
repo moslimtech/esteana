@@ -106,10 +106,11 @@ function flatToSurahs(flat) {
 
 /**
  * تحميل المصحف من الملف المحلي (مثلاً ./quran.json) — يعمل من file:// في WebView.
+ * في Android (file://) نستخدم مساراً نسبياً حتى يعمل fetch دون حظر.
  */
 async function loadQuranFromLocalJson() {
-  const base = typeof window !== 'undefined' && window.location ? window.location.href.replace(/\/[^/]*$/, '/') : '';
-  const url = base + 'quran.json';
+  const isFile = typeof window !== 'undefined' && window.location?.protocol === 'file:';
+  const url = isFile ? 'quran.json' : (window.location?.href?.replace(/\/[^/]*$/, '/') || '') + 'quran.json';
   const res = await fetch(url);
   if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
   const flat = await res.json();

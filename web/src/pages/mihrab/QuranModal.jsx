@@ -4,7 +4,7 @@ import { tokens, shape } from '../../theme/tokens';
 import { getThemeTokens } from '../../theme/getThemeTokens';
 import { AppIcon, CircularProgress } from '../../components';
 import { initQuranIfEmpty } from '../../initQuranIfEmpty';
-import { getSurahs, getSurah, isSurahsStoreEmpty, getSettings, saveSettings } from '../../db/database';
+import { getSurahs, getSurah, isSurahsStoreEmpty, getSettings, saveSettings, downloadQuranData } from '../../db/database';
 import { SurahView } from './SurahView';
 
 const OVERLAY_STYLE = {
@@ -59,7 +59,12 @@ export function QuranModal({ onClose }) {
       try {
         await initQuranIfEmpty();
         if (cancelled) return;
-        const empty = await isSurahsStoreEmpty();
+        let empty = await isSurahsStoreEmpty();
+        if (empty) {
+          const result = await downloadQuranData();
+          if (!cancelled && result?.ok) empty = false;
+        }
+        if (cancelled) return;
         if (empty) {
           setError(t.mihrab.quranFetchError);
           setLoading(false);
