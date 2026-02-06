@@ -105,15 +105,63 @@ function flatToSurahs(flat) {
 }
 
 /**
- * تحميل المصحف من الملف المحلي (مثلاً ./quran.json) — يعمل من file:// في WebView.
- * في Android (file://) نستخدم مساراً نسبياً حتى يعمل fetch دون حظر.
+ * جلب مصفوفة القرآن من جسر أندرويد (لأن Fetch لا يدعم file:// في WebView).
+ * يُرجع مصفوفة مسطحة أو null عند الفشل.
+ */
+function getQuranFromAndroidBridge() {
+  return new Promise((resolve) => {
+    const bridge = typeof window !== 'undefined' && (window.Android || window.AndroidBridge);
+    if (!bridge?.loadQuranJson) {
+      resolve(null);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      if (done) return;
+      done = true;
+      resolve(null);
+    }, 45000);
+    let done = false;
+    window.__onQuranJsonLoaded__ = (base64) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timeout);
+      try {
+        const json = atob(base64);
+        const flat = JSON.parse(json);
+        resolve(Array.isArray(flat) ? flat : null);
+      } catch {
+        resolve(null);
+      }
+    };
+    window.__onQuranJsonLoadError__ = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timeout);
+      resolve(null);
+    };
+    bridge.loadQuranJson();
+  });
+}
+
+/**
+ * تحميل المصحف من الملف المحلي — في WebView (file://) نستخدم جسر أندرويد لأن Fetch لا يدعم file://.
  */
 async function loadQuranFromLocalJson() {
   const isFile = typeof window !== 'undefined' && window.location?.protocol === 'file:';
-  const url = isFile ? 'quran.json' : (window.location?.href?.replace(/\/[^/]*$/, '/') || '') + 'quran.json';
-  const res = await fetch(url);
-  if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-  const flat = await res.json();
+  let flat = null;
+  if (isFile) {
+    flat = await getQuranFromAndroidBridge();
+  }
+  if (!flat || flat.length === 0) {
+    const url = isFile ? 'quran.json' : (window.location?.href?.replace(/\/[^/]*$/, '/') || '') + 'quran.json';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+      flat = await res.json();
+    } catch {
+      return { ok: false, error: 'Fetch not supported or failed' };
+    }
+  }
   const surahs = flatToSurahs(flat);
   if (surahs.length === 0) return { ok: false, error: 'Empty local Quran' };
   const db = await openMuslimJourneyDB();

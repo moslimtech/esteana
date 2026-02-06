@@ -4,18 +4,22 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import com.google.firebase.messaging.FirebaseMessaging
+import java.util.concurrent.Executors
 
 /**
  * جسر JavaScript ← → Android للويب الهجين (WebAppInterface).
  * يُربط بالـ WebView عبر addJavascriptInterface فيستدعيه الـ JS:
- * Android.vibrate() أو AndroidBridge.vibrate()، Android.getFCMToken()
+ * Android.vibrate() أو AndroidBridge.vibrate()، Android.getFCMToken()، Android.loadQuranJson()
  */
 class WebAppInterface(
     private val webView: WebView
 ) {
+
+    private val ioExecutor = Executors.newSingleThreadExecutor()
 
     /**
      * استدعاء نظام الاهتزاز في الأندرويد (Haptic Feedback).
@@ -62,6 +66,35 @@ class WebAppInterface(
                     "if(typeof window.androidFCMTokenReceived==='function'){window.androidFCMTokenReceived('$escaped');}",
                     null
                 )
+            }
+        }
+    }
+
+    /**
+     * تحميل محتوى web/quran.json من الـ assets وتمريره للويب عبر window.__onQuranJsonLoaded__(base64).
+     * يُستدعى من JS لأن Fetch لا يدعم file:// في WebView.
+     */
+    @JavascriptInterface
+    fun loadQuranJson() {
+        ioExecutor.execute {
+            try {
+                val json = webView.context.assets.open("web/quran.json")
+                    .bufferedReader(Charsets.UTF_8).use { it.readText() }
+                val base64 = Base64.encodeToString(json.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+                val escaped = base64.replace("\\", "\\\\").replace("'", "\\'")
+                webView.post {
+                    webView.evaluateJavascript(
+                        "if(typeof window.__onQuranJsonLoaded__==='function'){window.__onQuranJsonLoaded__('$escaped');}",
+                        null
+                    )
+                }
+            } catch (e: Exception) {
+                webView.post {
+                    webView.evaluateJavascript(
+                        "if(typeof window.__onQuranJsonLoadError__==='function'){window.__onQuranJsonLoadError__(true);}",
+                        null
+                    )
+                }
             }
         }
     }
