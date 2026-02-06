@@ -1,21 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getSettings, saveSettings, getDailyLogsForToday } from '../db/database';
-import { getAssetJson } from '../lib/androidBridge';
 import { TASKS_BY_AGE_GROUP } from '../constants/athariTasks';
 
+const ANDROID_ASSET_BASE = 'https://app.esteana.local';
 const DAILY_ACTIONS_JSON = '/daily_actions.json';
-const DAILY_ACTIONS_ASSET = 'web/daily_actions.json';
 
 /**
- * جلب daily_actions.json — من الجسر في WebView (file://) أو fetch في المتصفح.
+ * جلب daily_actions.json — في WebView (file://) من app.esteana.local، وإلا fetch من المسار العادي.
  */
 async function loadDailyActionsJson() {
-  if (typeof window !== 'undefined' && window.location?.protocol === 'file:') {
-    const data = await getAssetJson(DAILY_ACTIONS_ASSET);
-    if (data && typeof data === 'object') return data;
-  }
+  const url =
+    typeof window !== 'undefined' && window.location?.protocol === 'file:'
+      ? `${ANDROID_ASSET_BASE}/daily_actions.json`
+      : DAILY_ACTIONS_JSON;
   try {
-    const r = await fetch(DAILY_ACTIONS_JSON);
+    const r = await fetch(url);
     return r.ok ? await r.json() : null;
   } catch {
     return null;

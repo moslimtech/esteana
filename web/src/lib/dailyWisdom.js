@@ -1,21 +1,18 @@
-import { getAssetJson } from './androidBridge';
-
+const ANDROID_ASSET_BASE = 'https://app.esteana.local';
 const WISDOM_URL = '/daily-wisdom.json';
-const WISDOM_ASSET = 'web/daily-wisdom.json';
 let cachedList = null;
 
 /**
- * جلب قائمة الحكم من الملف المحلي (مرّة واحدة). في WebView (file://) نستخدم جسر أندرويد.
+ * جلب قائمة الحكم من الملف المحلي (مرّة واحدة). في WebView (file://) نطلب من app.esteana.local.
  * @returns {Promise<Array<{ type: string, text: string, source: string }>>}
  */
 export async function fetchDailyWisdomList() {
   if (cachedList) return cachedList;
-  if (typeof window !== 'undefined' && window.location?.protocol === 'file:') {
-    const data = await getAssetJson(WISDOM_ASSET);
-    cachedList = Array.isArray(data) ? data : [];
-    return cachedList;
-  }
-  const res = await fetch(WISDOM_URL);
+  const url =
+    typeof window !== 'undefined' && window.location?.protocol === 'file:'
+      ? `${ANDROID_ASSET_BASE}/daily-wisdom.json`
+      : WISDOM_URL;
+  const res = await fetch(url);
   if (!res.ok) return [];
   const list = await res.json();
   cachedList = Array.isArray(list) ? list : [];

@@ -9,6 +9,7 @@ import android.util.Log
 import android.os.Build.VERSION_CODES
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "Esteana_WebView"
+        private const val ASSET_HOST = "app.esteana.local"
     }
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -81,6 +83,30 @@ class MainActivity : ComponentActivity() {
                                     request: WebResourceRequest
                                 ): Boolean {
                                     return false
+                                }
+
+                                override fun shouldInterceptRequest(
+                                    view: WebView,
+                                    request: WebResourceRequest
+                                ): WebResourceResponse? {
+                                    val url = request.url ?: return null
+                                    if (url.host != ASSET_HOST) return null
+                                    val path = url.path ?: return null
+                                    val assetPath = "web" + (if (path.startsWith("/")) path else "/$path")
+                                    return try {
+                                        val stream = context.assets.open(assetPath)
+                                        val headers = mapOf("Access-Control-Allow-Origin" to "*")
+                                        WebResourceResponse(
+                                            "application/json",
+                                            "UTF-8",
+                                            200,
+                                            "OK",
+                                            headers,
+                                            stream
+                                        )
+                                    } catch (_: Exception) {
+                                        null
+                                    }
                                 }
 
                                 override fun onReceivedError(
