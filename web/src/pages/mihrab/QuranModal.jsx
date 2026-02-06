@@ -56,6 +56,7 @@ export function QuranModal({ onClose }) {
   const loadQuran = useCallback(async () => {
     setError(null);
     setLoading(true);
+    setSurahs([]);
     let cancelled = false;
     try {
       await initQuranIfEmpty();
@@ -68,25 +69,30 @@ export function QuranModal({ onClose }) {
       if (cancelled) return;
       if (empty) {
         setError(t.mihrab.quranFetchError);
-        setLoading(false);
         return;
       }
       const list = await getSurahs();
-      if (!cancelled) {
-        setSurahs(list);
-        setLoading(false);
-      }
+      if (!cancelled) setSurahs(list);
     } catch (e) {
-      if (!cancelled) {
-        setError(t.mihrab.quranFetchError);
-        setLoading(false);
-      }
+      if (!cancelled) setError(t.mihrab.quranFetchError);
+    } finally {
+      if (!cancelled) setLoading(false);
     }
   }, [t.mihrab.quranFetchError]);
 
   useEffect(() => {
     loadQuran();
-  }, [loadQuran]);
+    const timeout = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          setError((e) => e || t.mihrab.quranFetchError);
+          return false;
+        }
+        return prev;
+      });
+    }, 22000);
+    return () => clearTimeout(timeout);
+  }, [loadQuran, t.mihrab.quranFetchError]);
 
   useEffect(() => {
     if (!selectedSurah) {
@@ -140,19 +146,21 @@ export function QuranModal({ onClose }) {
             <p style={{ marginTop: 16, color: themeTokens.onSurfaceVariant, fontSize: 14 }}>{t.mihrab.quranLoading}</p>
           </div>
         ) : error || surahs.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center' }}>
-            <p style={{ color: tokens.error, marginBottom: 16, fontSize: 15 }}>{error || t.mihrab.quranFetchError}</p>
-            <p style={{ color: themeTokens.onSurfaceVariant, fontSize: 14, marginBottom: 20 }}>{t.mihrab.quranRetryHint}</p>
+          <div style={{ padding: 24, textAlign: 'center', minHeight: 260, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            <p style={{ color: tokens.error, marginBottom: 12, fontSize: 16 }}>{error || t.mihrab.quranFetchError}</p>
+            <p style={{ color: themeTokens.onSurfaceVariant, fontSize: 14, marginBottom: 24 }}>{t.mihrab.quranRetryHint}</p>
             <button
               type="button"
               onClick={() => loadQuran()}
               style={{
-                padding: '12px 24px',
+                padding: '14px 28px',
+                minWidth: 180,
                 backgroundColor: tokens.primary,
                 color: tokens.onPrimary,
                 border: 'none',
                 borderRadius: shape.radiusMedium,
-                fontSize: 16,
+                fontSize: 17,
+                fontWeight: 600,
                 fontFamily: tokens.typography.fontFamily,
                 cursor: 'pointer',
               }}
